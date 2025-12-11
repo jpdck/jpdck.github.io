@@ -1,162 +1,285 @@
-// script.js
-// Fetch GitHub repositories for user jpdck and render them dynamically.
+// Terminal Portfolio - jpdck
+// Theme management, repo rendering, and easter egg commands
 
 document.addEventListener('DOMContentLoaded', () => {
-  const reposContainer = document.getElementById('repos');
-  const languageFiltersContainer = document.getElementById('language-filters');
-  const searchInput = document.getElementById('search');
-  const yearSpan = document.getElementById('year');
-  yearSpan.textContent = new Date().getFullYear().toString();
+  const asciiArt = document.querySelector('.ascii-art');
+  const reposContainer = document.getElementById('repos-container');
+  const commandInput = document.getElementById('command-input');
+  const themeButtons = document.querySelectorAll('.theme-toggle button');
+  const root = document.documentElement;
 
-  let reposData = [];
-  let currentLanguage = 'all';
+  // ASCII art banner
+  const banner = `
+     _           _      _
+    (_)_ __   __| | ___| | __
+    | | '_ \\ / _\` |/ __| |/ /
+    | | |_) | (_| | (__|   <
+   _/ | .__/ \\__,_|\\___|_|\\_\\
+  |__/|_|
+  `;
 
-  /**
-   * Fetch public repositories for the given GitHub user.
-   * This uses the GitHub REST API, which supports CORS for public requests.
-   */
-  async function fetchRepos() {
-    try {
-      const response = await fetch('https://api.github.com/users/jpdck/repos?per_page=100');
-      if (!response.ok) {
-        throw new Error(`GitHub API responded with status ${response.status}`);
-      }
-      const data = await response.json();
-      // sort repositories by last update descending
-      reposData = data.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-      generateLanguageFilters();
-      renderRepos();
-    } catch (error) {
-      console.error('Error fetching repositories:', error);
-      reposContainer.innerHTML = '<p>Failed to load repositories. Please try again later.</p>';
-    }
-  }
+  asciiArt.textContent = banner;
 
-  /**
-   * Generate unique language filter buttons based on the repository data.
-   * Creates a button for each language and attaches an event listener.
-   */
-  function generateLanguageFilters() {
-    const languages = new Set();
-    reposData.forEach((repo) => {
-      if (repo.language) {
-        languages.add(repo.language);
-      }
-    });
-    languages.forEach((lang) => {
-      const btn = document.createElement('button');
-      btn.classList.add('filter-button');
-      btn.dataset.filter = lang;
-      btn.textContent = lang;
-      languageFiltersContainer.appendChild(btn);
-      btn.addEventListener('click', () => {
-        // remove active class from all filter buttons
-        document.querySelectorAll('.filter-button').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentLanguage = lang;
-        searchInput.value = '';
-        renderRepos();
-      });
+  // Theme Management
+  function setTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('preferred-theme', theme);
+
+    themeButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === theme);
     });
   }
 
-  /**
-   * Filter repositories based on currently selected language and search text.
-   * @returns {Array} filtered repository objects
-   */
-  function filterRepos() {
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    return reposData.filter((repo) => {
-      const matchesLang = currentLanguage === 'all' || repo.language === currentLanguage;
-      const name = repo.name.toLowerCase();
-      const desc = (repo.description || '').toLowerCase();
-      const matchesSearch = name.includes(searchTerm) || desc.includes(searchTerm);
-      return matchesLang && matchesSearch;
-    });
+  function initTheme() {
+    const savedTheme = localStorage.getItem('preferred-theme') || 'dark';
+    setTheme(savedTheme);
   }
 
-  /**
-   * Render repository cards to the DOM based on filtered data.
-   */
-  function renderRepos() {
-    reposContainer.innerHTML = '';
-    const filtered = filterRepos();
-    if (filtered.length === 0) {
-      reposContainer.innerHTML = '<p>No repositories match your criteria.</p>';
-      return;
-    }
-    filtered.forEach((repo) => {
-      const card = document.createElement('div');
-      card.className = 'repo-card';
-      // Title
-      const titleDiv = document.createElement('div');
-      titleDiv.className = 'repo-title';
-      titleDiv.innerHTML = `<a href="${repo.html_url}" target="_blank" rel="noopener noreferrer">${repo.name}</a>`;
-      card.appendChild(titleDiv);
-      // Description
-      const descP = document.createElement('p');
-      descP.className = 'repo-description';
-      descP.textContent = repo.description || 'No description provided.';
-      card.appendChild(descP);
-      // Metadata section
-      const metaDiv = document.createElement('div');
-      metaDiv.className = 'repo-meta';
-      // language tag
-      if (repo.language) {
-        const langSpan = document.createElement('span');
-        langSpan.className = 'tag';
-        langSpan.textContent = repo.language;
-        metaDiv.appendChild(langSpan);
-      }
-      // star badge
-      const starSpan = document.createElement('span');
-      starSpan.className = 'badge';
-      starSpan.innerHTML = `${starIcon()} ${repo.stargazers_count}`;
-      metaDiv.appendChild(starSpan);
-      // watchers badge
-      const watchSpan = document.createElement('span');
-      watchSpan.className = 'badge';
-      watchSpan.innerHTML = `${eyeIcon()} ${repo.watchers_count}`;
-      metaDiv.appendChild(watchSpan);
-      card.appendChild(metaDiv);
-      reposContainer.appendChild(card);
+  themeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setTheme(btn.dataset.theme);
     });
-  }
-
-  /**
-   * Returns inline SVG markup for a star icon.
-   */
-  function starIcon() {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.63-6.99L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.45 4.77L5.82 21z"></path></svg>';
-  }
-  /**
-   * Returns inline SVG markup for an eye icon.
-   */
-  function eyeIcon() {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5c-7.28 0-11 7.5-11 7.5s3.72 7.5 11 7.5 11-7.5 11-7.5-3.72-7.5-11-7.5zm0 13c-3.02 0-5.5-2.48-5.5-5.5s2.48-5.5 5.5-5.5 5.5 2.48 5.5 5.5-2.48 5.5-5.5 5.5zm0-9c-1.93 0-3.5 1.57-3.5 3.5s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5-1.57-3.5-3.5-3.5z"></path></svg>';
-  }
-
-  // Attach search listener
-  searchInput.addEventListener('input', () => {
-    // Keep the active state for the current language filter
-    document.querySelectorAll('.filter-button').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.filter === currentLanguage);
-    });
-    renderRepos();
   });
 
-  // Attach event listener for the static "All" filter button
-  const allButton = document.querySelector('.filter-button[data-filter="all"]');
-  if (allButton) {
-    allButton.addEventListener('click', (e) => {
-      document.querySelectorAll('.filter-button').forEach((b) => b.classList.remove('active'));
-      e.target.classList.add('active');
-      currentLanguage = 'all';
-      searchInput.value = '';
-      renderRepos();
-    });
+  // Load and render repos from JSON
+  let lastRepoData = null;
+  async function loadRepos() {
+    try {
+      const response = await fetch('repos.json?t=' + Date.now());
+      if (!response.ok) {
+        throw new Error(`Failed to load repos: ${response.status}`);
+      }
+      const data = await response.json();
+      const dataStr = JSON.stringify(data);
+
+      // Only re-render if data actually changed
+      if (dataStr !== lastRepoData) {
+        lastRepoData = dataStr;
+        renderRepos(data);
+      }
+    } catch (error) {
+      console.error('Error loading repos:', error);
+      reposContainer.innerHTML = '<p class="error">Failed to load projects. Check repos.json</p>';
+    }
   }
 
-  // Kick off fetch
-  fetchRepos();
+  // Poll for changes every 2 seconds (only in dev)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    setInterval(loadRepos, 2000);
+  }
+
+  function renderRepos(data) {
+    reposContainer.innerHTML = '';
+
+    // Render featured repos
+    if (data.featured && data.featured.length > 0) {
+      const featuredTitle = document.createElement('div');
+      featuredTitle.innerHTML = '<strong style="color: var(--pink);">Featured Projects:</strong>';
+      reposContainer.appendChild(featuredTitle);
+
+      data.featured.forEach(repo => {
+        reposContainer.appendChild(createRepoElement(repo));
+      });
+    }
+
+    // Render interesting repos
+    if (data.interesting && data.interesting.length > 0) {
+      const interestingTitle = document.createElement('div');
+      interestingTitle.innerHTML = '<strong style="color: var(--cyan); margin-top: 20px; display: block;">Other Interesting Projects:</strong>';
+      reposContainer.appendChild(interestingTitle);
+
+      data.interesting.forEach(repo => {
+        reposContainer.appendChild(createRepoElement(repo));
+      });
+    }
+
+    if (!data.featured?.length && !data.interesting?.length) {
+      reposContainer.innerHTML = '<p>No projects configured. Edit repos.json to add some.</p>';
+    }
+  }
+
+  function createRepoElement(repo) {
+    const item = document.createElement('div');
+    item.className = `repo-item${repo.highlight ? ' highlight' : ''}`;
+
+    const name = document.createElement('div');
+    name.className = 'repo-name';
+    name.innerHTML = `<a href="${repo.url}" target="_blank" rel="noopener noreferrer">${repo.name}</a>`;
+    item.appendChild(name);
+
+    const description = document.createElement('div');
+    description.className = 'repo-description';
+    description.textContent = repo.description || 'No description provided.';
+    item.appendChild(description);
+
+    if (repo.tags && repo.tags.length > 0) {
+      const tagsContainer = document.createElement('div');
+      tagsContainer.className = 'repo-tags';
+      repo.tags.forEach(tag => {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'tag';
+        tagEl.textContent = tag;
+        tagsContainer.appendChild(tagEl);
+      });
+      item.appendChild(tagsContainer);
+    }
+
+    return item;
+  }
+
+  // Easter Egg Command System
+  const commands = {
+    'help': () => {
+      return `Available commands:
+  help       - Show this help message
+  clear      - Clear command history
+  whoami     - About me
+  contact    - Get in touch
+  konami     - ???
+  matrix     - Enter the matrix
+  hack       - Hacker mode activated
+
+Try typing anything to discover more...`;
+    },
+
+    'clear': () => {
+      const output = document.querySelector('.output');
+      const inputLine = document.querySelector('.input-line');
+      output.innerHTML = '';
+      output.appendChild(inputLine);
+      return null;
+    },
+
+    'whoami': () => {
+      return `jpdck - Developer, tinkerer, homelab enthusiast.
+Building things one commit at a time.`;
+    },
+
+    'contact': () => {
+      return `> GitHub: https://github.com/jpdck
+> Feel free to reach out via GitHub issues or discussions.`;
+    },
+
+    'konami': () => {
+      return `↑ ↑ ↓ ↓ ← → ← → B A
+You've unlocked... absolutely nothing. But nice try!`;
+    },
+
+    'matrix': () => {
+      const chars = 'ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ0123456789';
+      let output = '';
+      for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 40; j++) {
+          output += chars[Math.floor(Math.random() * chars.length)];
+        }
+        output += '\n';
+      }
+      return output + '\nWake up, Neo...';
+    },
+
+    'hack': () => {
+      return `> Accessing mainframe...
+> Bypassing firewall...
+> Downloading the internet...
+> [################] 100%
+
+Just kidding. I'm a developer, not a movie hacker.`;
+    },
+
+    'ls': () => {
+      return `projects/    easter-eggs/    README.md`;
+    },
+
+    'cat': () => {
+      return `Usage: cat [file]
+Try: cat README.md`;
+    },
+
+    'cat readme.md': () => {
+      return `# jpdck's Portfolio
+
+Welcome to my corner of the internet.
+Check out my projects above, or type 'help' for fun commands.`;
+    },
+
+    'pwd': () => {
+      return `/home/jpdck/github.io`;
+    },
+
+    'sudo': () => {
+      return `Nice try. You're not getting root access to my portfolio.`;
+    },
+
+    'exit': () => {
+      return `You can't exit. You're here forever. Muahaha!
+(Just close the tab if you really want to leave.)`;
+    },
+
+    'date': () => {
+      return new Date().toString();
+    },
+
+    'echo': (args) => {
+      return args.join(' ') || '';
+    }
+  };
+
+  function executeCommand(input) {
+    const [cmd, ...args] = input.toLowerCase().trim().split(/\s+/);
+
+    if (commands[input.toLowerCase()]) {
+      return commands[input.toLowerCase()](args);
+    } else if (commands[cmd]) {
+      return commands[cmd](args);
+    } else if (input.trim()) {
+      return `Command not found: ${cmd}
+Type 'help' for available commands.`;
+    }
+    return null;
+  }
+
+  function addCommandToHistory(command, output) {
+    const outputDiv = document.querySelector('.output');
+    const inputLine = document.querySelector('.input-line');
+
+    // Add command line
+    const commandLine = document.createElement('div');
+    commandLine.className = 'prompt-line';
+    commandLine.innerHTML = `<span class="prompt">&gt;</span> <span style="color: var(--fg);">${escapeHtml(command)}</span>`;
+    outputDiv.insertBefore(commandLine, inputLine);
+
+    // Add output if exists
+    if (output) {
+      const outputBlock = document.createElement('div');
+      outputBlock.className = 'command-output';
+      outputBlock.textContent = output;
+      outputDiv.insertBefore(outputBlock, inputLine);
+    }
+
+    // Scroll to bottom
+    outputDiv.parentElement.scrollTop = outputDiv.parentElement.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  commandInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const command = commandInput.value;
+      const output = executeCommand(command);
+
+      if (output !== null) {
+        addCommandToHistory(command, output);
+      }
+
+      commandInput.value = '';
+    }
+  });
+
+  // Initialize
+  initTheme();
+  loadRepos();
 });

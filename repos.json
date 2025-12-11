@@ -1,0 +1,27 @@
+{
+  "featured": [
+    {
+      "name": "capsuleOS",
+      "description": "Automated macOS development environment bootstrap using Homebrew.",
+      "url": "https://github.com/jpdck/capsuleOS",
+      "tags": ["macos", "amber", "homebrew", "capsuleOS", "dotfiles", "automation", "developer-tools"],
+      "highlight": true
+    },
+    {
+      "name": "kobo-tailscale",
+      "description": "Run Tailscale on Kobo eReaders to enable secure remote access to files.",
+      "url": "https://github.com/jpdck/kobo-tailscale",
+      "tags": ["kobo", "tailscale", "eReader", "linux", "vpn"],
+      "highlight": true
+    }
+  ],
+  "interesting": [
+    {
+      "name": "amber-lang",
+      "description": "Amber the programming language compiled to Bash ",
+      "url": "https://github.com/amber-lang/amber",
+      "tags": ["amber", "programming-language", "bash", "compiler"],
+      "highlight": false
+    }
+  ]
+}
